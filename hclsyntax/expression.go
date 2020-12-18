@@ -1143,6 +1143,9 @@ func (e *ForExpr) Value(ctx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
 					continue
 				}
 
+				// Ignore marks for conditional expressions, because the
+				// conditional cannot propagate into the result
+				include, _ = include.Unmark()
 				if include.False() {
 					// Skip this element
 					continue
@@ -1300,6 +1303,9 @@ func (e *ForExpr) Value(ctx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
 					continue
 				}
 
+				// Ignore marks for conditional expressions, because the
+				// conditional cannot propagate into the result
+				include, _ = include.Unmark()
 				if include.False() {
 					// Skip this element
 					continue
