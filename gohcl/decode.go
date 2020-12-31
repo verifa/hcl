@@ -7,6 +7,7 @@ import (
 	"github.com/zclconf/go-cty/cty"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/ext/typeexpr"
 	"github.com/zclconf/go-cty/cty/convert"
 	"github.com/zclconf/go-cty/cty/gocty"
 )
@@ -304,6 +305,27 @@ func decodeBlockToValue(block *hcl.Block, ctx *hcl.EvalContext, v reflect.Value)
 // may still be accessed by a careful caller for static analysis and editor
 // integration use-cases.
 func DecodeExpression(expr hcl.Expression, ctx *hcl.EvalContext, val interface{}) hcl.Diagnostics {
+	// BEGIN EDIT: decode to cty.Type if that is the src
+	if _, ok := val.(*cty.Type); ok {
+		ctyType, diags := typeexpr.TypeConstraint(expr)
+		if diags.HasErrors() {
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Unsuitable type expr",
+				Detail:   fmt.Sprintf("Unsuitable type expr: %s", diags.Error()),
+				Subject:  expr.StartRange().Ptr(),
+				Context:  expr.Range().Ptr(),
+			})
+			return diags
+		}
+
+		// assign the ctyType to the target field
+		target := reflect.ValueOf(val).Elem()
+		target.Set(reflect.ValueOf(ctyType))
+		return diags
+	}
+	// END EDIT
+
 	srcVal, diags := expr.Value(ctx)
 
 	convTy, err := gocty.ImpliedType(val)
